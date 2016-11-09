@@ -1,4 +1,4 @@
-package Core;
+package core;
 
 import exception.InvalidFile;
 import exception.OutOfMemoryException;
@@ -22,24 +22,14 @@ public class Core {
     private final static byte MAXVALUE = MAX - MIN - CELL;
     private final static int MEMORY_CAPACITY = 30000;
 
-    private Language language;
-    private List<Instruction> instructions;
     private byte[] M;
     private int p;
     private int i;
 
     public Core(Language language) {
-        this.language = language;
-        instructions = getInstructions();
         M = new byte[MEMORY_CAPACITY];
         p = 0;
         i = 0;
-    }
-
-    public Instruction match(char c) {
-        for (Instruction instruction: instructions)
-            if (instruction.shortSyntax().equals(c)) return instruction;
-        return new Null();
     }
 
     public int getExecutionPointer() {
@@ -59,9 +49,6 @@ public class Core {
     }
 
     public void getMemorySnapshot() {
-        for (int i=0; i<MEMORY_CAPACITY; i++)
-            if (!dp(i))
-                language.stout("C" + i + ": " + getValue(i));
     }
 
     private boolean dp() {
@@ -99,11 +86,6 @@ public class Core {
 
         @Override
         public void execute() throws OverflowException {
-            if (M[p] != MAXVALUE)
-                M[p]++;
-            else
-                throw new OverflowException();
-            nextInstruction();
         }
     }
 
@@ -114,11 +96,6 @@ public class Core {
 
         @Override
         public void execute() throws OverflowException {
-            if (M[p] != 0)
-                M[p]--;
-            else
-                throw new OverflowException();
-            nextInstruction();
         }
     }
 
@@ -129,10 +106,6 @@ public class Core {
 
         @Override
         public void execute() throws OutOfMemoryException {
-            if (p != 0)
-                p--;
-            else
-                throw new OutOfMemoryException();
         }
     }
 
@@ -143,11 +116,6 @@ public class Core {
 
         @Override
         public void execute() throws OutOfMemoryException {
-            if (p != M.length - 1)
-                p++;
-            else
-                throw new OutOfMemoryException();
-            nextInstruction();
         }
     }
 
@@ -158,9 +126,6 @@ public class Core {
 
         @Override
         public void execute() throws InvalidFile {
-            // language.write(getValue());
-            System.out.print((char) getValue());
-            nextInstruction();
         }
     }
 
@@ -171,7 +136,6 @@ public class Core {
 
         @Override
         public void execute() throws InvalidFile {
-            setValue(language.read());
         }
     }
 
@@ -182,20 +146,7 @@ public class Core {
 
         @Override
         public void execute() throws UncheckedException {
-            if (dp()) {
-                int n = 0;
-                Instruction instruction;
-                while (n >= 0) {
-                    if (!language.hasNext()) throw new UncheckedException();
-                    instruction = language.next();
-                    if (instruction instanceof Jump)
-                        n += 1;
-                    else if (instruction instanceof Back)
-                        n -= 1;
-                    nextInstruction();
-                }
-            }
-            nextInstruction();
+
         }
     }
 
@@ -206,31 +157,6 @@ public class Core {
 
         @Override
         public void execute() throws UncheckedException {
-            if (!dp()) {
-                int n = 0;
-                Instruction instruction;
-                while (n <= 0) {
-                    if (!language.hasPrevious()) throw new UncheckedException();
-                    instruction = language.previous();
-                    if (instruction instanceof Jump)
-                        n += 1;
-                    else if (instruction instanceof Back)
-                        n -= 1;
-                    previousInstruction();
-                }
-            }
-            nextInstruction();
-        }
-    }
-
-    public class Null extends Instruction {
-        public Null() {
-            super("NULL", '\0', Color.BLACK);
-        }
-
-        @Override
-        public void execute() throws OverflowException, OutOfMemoryException, InvalidFile, UncheckedException {
-            nextInstruction();
         }
     }
 }

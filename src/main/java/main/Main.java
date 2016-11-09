@@ -9,7 +9,7 @@ import interpreter.Interpreter;
 public class Main {
     public static void main(String[] args) {
         long start = System.currentTimeMillis();
-        new Interpreter().build(args);
+        new Interpreter().build(args).run();
         System.out.println(System.currentTimeMillis() - start);
     }
 }

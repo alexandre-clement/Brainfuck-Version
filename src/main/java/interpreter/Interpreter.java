@@ -12,32 +12,54 @@ import java.util.stream.Collectors;
  *         Created the 04 novembre 2016.
  */
 public class Interpreter {
-    private List<Argument> arguments;
-    private List<Option> options;
     private Language language;
+    private boolean hasUniqueOption;
+    private Deque<Argument> options;
 
-    public int build(final String... commandline) {
-        language = new Language();
-        arguments = getNewArgument();
-        options = getOptionFromCommandline(commandline).stream().map(argument -> argument).collect(Collectors.toList());
-        callOption();
-        // exit(0);
-        return 0;
-    }
+    public Interpreter build(final String... args) {
+        Deque<String> commandline = new ArrayDeque<>();
+        commandline.addAll(Arrays.asList(args));
 
-    private List<Argument> getOptionFromCommandline(final String... commandline) {
-        return arguments.stream().filter(argument -> argument.isIn(commandline)).collect(Collectors.toList());
-    }
+        List<Argument> arguments = new ArrayList<>();
+        arguments.addAll(getNewArgument());
 
-    private boolean hasUniqueOption() {
-        return !options.stream().filter(option -> option instanceof UniqueOption).limit(1).collect(Collectors.toSet()).isEmpty();
-    }
+        resetFilenames();
 
-    private void callOption() {
+        options = new ArrayDeque<>();
+
         try {
-            for (Option option: options) {
-                option.call();
+            while (!commandline.isEmpty())
+                options.add(getOptionFromCommand(arguments, commandline));
+        } catch (UnknownOption exception) {
+            exit(126);
+        }
+        return this;
+    }
+
+    public void resetFilenames() {
+        for (Filenames filename: Filenames.values())
+            filename.setName(null);
+    }
+
+    public void run() {
+        language = new Language();
+        hasUniqueOption = !noUniqueOption(options);
+        options.forEach(this::callOption);
+    }
+
+    private Argument getOptionFromCommand(List<Argument> arguments, Deque<String> commandline) throws UnknownOption {
+        for (Argument argument: arguments) {
+            if (argument.match(commandline)) {
+                arguments.remove(argument);
+                return argument;
             }
+        }
+        throw new UnknownOption();
+    }
+
+    private void callOption(Option option) {
+        try {
+            option.call();
         } catch (IOException exception) {
             exit(127);
         } catch (OverflowException exception) {
@@ -51,6 +73,10 @@ public class Interpreter {
         }
     }
 
+    private boolean noUniqueOption(Deque<Argument> options) {
+        return options.stream().filter(option -> option instanceof UniqueOption).collect(Collectors.counting()) == 0;
+    }
+
     private List<Argument> getNewArgument() {
         return new ArrayList<>(Arrays.asList(new InFile(), new OutFile(), new Print(), new Check(), new Rewrite(), new Translate()));
     }
@@ -59,21 +85,25 @@ public class Interpreter {
         System.exit(code);
     }
 
-    private class Print extends FileOption {
+
+    private class Print extends Argument {
         private Print() {
             super("-p");
         }
 
         @Override
+        public boolean match(Deque<String> commandline) {
+            if (!super.match(commandline))
+                return false;
+            Filenames.source.setName(commandline.pollFirst());
+            return true;
+        }
+
+        @Override
         public void call() throws IOException, OverflowException, OutOfMemoryException, InvalidFile, MalFormedException {
-            language.setFile(super.getFilename());
-            language.setCore(new Core.Core(language));
-            if (!hasUniqueOption())
-                try {
-                    language.execute().getMemorySnapshot();
-                } catch (UncheckedException exception) {
-                    throw new MalFormedException();
-                }
+            if (!hasUniqueOption) {
+                language.runSource();
+            }
         }
     }
 
@@ -97,25 +127,39 @@ public class Interpreter {
         }
     }
 
-    private class InFile extends FileOption {
+    private class InFile extends Argument {
         private InFile() {
             super("-i");
         }
 
         @Override
+        public boolean match(Deque<String> commandline) {
+            if (!super.match(commandline))
+                return false;
+            Filenames.input.setName(commandline.pollFirst());
+            return true;
+        }
+
+        @Override
         public void call() throws InvalidFile {
-            language.setInput(super.getFilename());
         }
     }
 
-    private class OutFile extends FileOption {
+    private class OutFile extends Argument {
         private OutFile() {
             super("-o");
         }
 
         @Override
+        public boolean match(Deque<String> commandline) {
+            if (!super.match(commandline))
+                return false;
+            Filenames.output.setName(commandline.pollFirst());
+            return true;
+        }
+
+        @Override
         public void call() throws IOException, OverflowException, OutOfMemoryException, InvalidFile, MalFormedException {
-            language.setOutput(super.getFilename());
         }
     }
 

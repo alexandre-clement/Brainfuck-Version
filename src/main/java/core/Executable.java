@@ -1,4 +1,4 @@
-package Core;
+package core;
 
 import exception.InvalidFile;
 import exception.OutOfMemoryException;

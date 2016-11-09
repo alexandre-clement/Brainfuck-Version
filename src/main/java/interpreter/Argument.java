@@ -1,5 +1,7 @@
 package interpreter;
 
+import java.util.Deque;
+
 /**
  * @author Alexandre Clement
  *         Created the 07 novembre 2016.
@@ -20,11 +22,10 @@ abstract class Argument implements Option {
         return name;
     }
 
-    public boolean isIn(String... commandline) {
-        int isIn = 0;
-        for (String command: commandline) {
-            if (getName().equals(command)) isIn += 1;
-        }
-        return isIn == 1;
+    public boolean match(Deque<String> commandline) {
+        if (name == null || name.equals(commandline.peekFirst()))
+            return false;
+        commandline.removeFirst();
+        return true;
     }
 }
